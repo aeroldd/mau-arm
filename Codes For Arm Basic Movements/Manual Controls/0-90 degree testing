@@ -19,7 +19,6 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 // Convert angle to PCA9685 pulse
 int angleToPulse(int angle)
 {
-  angle = constrain(angle, 0, 180);
   return map(angle, 0, 180, SERVOMIN, SERVOMAX);
 }
 
@@ -37,38 +36,32 @@ void setup()
 
   delay(1000);
 
-  // Initial positions
-  moveServo(BASE, 0);
-  moveServo(SHOULDER_L, 0);
-  moveServo(SHOULDER_R, 180);
-  moveServo(ELBOW_L, 180);
-  moveServo(ELBOW_R, 0);
-  moveServo(WRIST_PITCH, 0);
-  moveServo(GRIPPER, 0);
+  // Start all at 0°
+  moveServo(BASE,0);
+  moveServo(SHOULDER_L,0);
+  moveServo(SHOULDER_R,180);
+  moveServo(ELBOW_L,180);
+  moveServo(ELBOW_R,0);
+  moveServo(WRIST_PITCH,0);
+  moveServo(GRIPPER,0);
 
   delay(2000);
 
-  // Sweep from 0° to 180°
-  for (int angle = 0; angle <= 180; angle++)
+  // Move all together from 0° to 90°
+  for(int angle=0; angle<90; angle++)
   {
-    moveServo(BASE, angle);
-
-    // Shoulder pair
-    moveServo(SHOULDER_L, angle);
-    moveServo(SHOULDER_R, 180 - angle);
-
-    // Elbow pair
-    moveServo(ELBOW_L, 180 - angle);
-    moveServo(ELBOW_R, angle);
-
-    // Wrist and gripper
-    moveServo(WRIST_PITCH, angle);
-    moveServo(GRIPPER, angle);
+    moveServo(BASE,angle);
+    moveServo(SHOULDER_L,angle);
+    moveServo(SHOULDER_R,180-angle);
+    moveServo(ELBOW_L,180-angle);
+    moveServo(ELBOW_R,angle);
+    moveServo(WRIST_PITCH,angle);
+    moveServo(GRIPPER,angle);
 
     delay(20);
   }
 
-  Serial.println("Reached 180 degrees.");
+  Serial.println("Reached 90 degrees.");
 }
 
 void loop()
