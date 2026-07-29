@@ -9,6 +9,7 @@ void handleHome();
 void handleServo();
 
 void initWebServer();
+void updateWebServerControl();
 
 
 #endif

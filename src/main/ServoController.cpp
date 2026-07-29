@@ -17,5 +17,6 @@ int angleToPulse(int angle)
 }
 
 void initServoController() {
-  
+  pwm.begin();
+  pwm.setPWMFreq(50);
 }

@@ -212,3 +212,7 @@ void initWebServer() {
 
   server.begin();
 }
+
+void updateWebServerControl() {
+  server.handleClient();
+}

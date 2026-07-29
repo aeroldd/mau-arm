@@ -9,12 +9,10 @@ void setup()
   Serial.begin(115200);
   initWebServer();
 
-  pwm.begin();
-  pwm.setPWMFreq(50);
-
   setHome();
 }
 
+String line;
 
 void loop()
 {
@@ -27,7 +25,7 @@ void loop()
     }
   }
   //Serial.println("test");
-  server.handleClient();
+  updateWebServerControl();
 
   updateServos();
 }
