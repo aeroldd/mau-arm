@@ -1,7 +1,72 @@
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
+// WIFI SHIT
+#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid = "Aejaz";
+const char* password = "mirdif786";
+
+WebServer server(80);
+
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+void handleRoot()
+{
+  String page = 
+  "<!DOCTYPE html>"
+  "<html>"
+  "<head>"
+  "<title>ESP32 Robot Arm</title>"
+  "</head>"
+
+  "<body>"
+  "<h1>Robot Arm Controller</h1>"
+
+  "<form action='/send' method='GET'>"
+  "<label>Command:</label><br>"
+  "<input type='text' name='cmd' placeholder='Example: 0 90'>"
+  "<br><br>"
+  "<button type='submit'>Send</button>"
+  "</form>"
+
+  "<br>"
+  "<a href='/home'>Set Home</a>"
+
+  "</body>"
+  "</html>";
+
+  server.send(200, "text/html", page);
+}
+
+void handleSend()
+{
+  if (server.hasArg("cmd"))
+  {
+    String cmd = server.arg("cmd");
+
+    Serial.print("WEB CMD: ");
+    Serial.println(cmd);
+
+    parseCommand(cmd);
+
+    server.send(200, "text/html",
+    "<h2>Command sent</h2><a href='/'>Back</a>");
+  }
+  else
+  {
+    server.send(400, "text/plain", "No command received");
+  }
+}
+
+void handleHome()
+{
+  setHome();
+
+  server.send(200, "text/html",
+  "<h2>Robot moved to Home</h2><a href='/'>Back</a>");
+}
 
 // Servo pulse limits
 #define SERVOMIN 125
@@ -30,34 +95,53 @@ typedef struct {
 
 // base, shoulder, elbow, pitch, wrist revolution
 Joint joints[] = {{0,0}, {1,0}, {2,0} ,{3, 0}, {4, 0}};
+double currentAngles[5] = {90,90,90,90,90};
 
-void setJointAngle(int jointNo, double angle) {
-  // set the angles in the struct
-  joints[jointNo].angle = angle;
+void setJointAngle(int jointNo, double targetAngle)
+{
+  targetAngle = constrain(targetAngle, 0, 180);
 
-  // move the associated servos for each joint
-  // joint 1, which is the shoulder has two opposing servos.
-  // joint 2, the elbow has two opposing servos as well.
+  double startAngle = currentAngles[jointNo];
 
-  switch (jointNo) {
-    case 0:
-      moveServo(BASE_SERVO, angle);
-      break;
-    case 1:
-      moveServo(SHOULDER_L_SERVO, angle);
-      moveServo(SHOULDER_R_SERVO, 180-angle);
-      break;
-    case 2:
-      moveServo(ELBOW_L_SERVO, angle);
-      moveServo(ELBOW_R_SERVO, 180 - angle);
-      break;
-    case 3:
-      moveServo(WRIST_PITCH_SERVO, angle);
-      break;
-    case 4:
-      moveServo(GRIPPER_SERVO, angle);
-      break;
+  int steps = abs(targetAngle - startAngle);
+
+  if (steps == 0) return;
+
+  for (int i = 0; i <= steps; i++)
+  {
+    double angle = startAngle + 
+      (targetAngle - startAngle) * i / steps;
+
+
+    switch (jointNo)
+    {
+      case BASE:
+        moveServo(BASE_SERVO, angle);
+        break;
+
+      case SHOULDER:
+        moveServo(SHOULDER_L_SERVO, angle);
+        moveServo(SHOULDER_R_SERVO, 180-angle);
+        break;
+
+      case ELBOW:
+        moveServo(ELBOW_L_SERVO, angle);
+        moveServo(ELBOW_R_SERVO, 180-angle);
+        break;
+
+      case WRIST:
+        moveServo(WRIST_PITCH_SERVO, angle);
+        break;
+
+      case GRIPPER:
+        moveServo(GRIPPER_SERVO, angle);
+        break;
+    }
+
+    delay(20); // speed control
   }
+
+  currentAngles[jointNo] = targetAngle;
 }
 
 void setPose(
@@ -98,6 +182,27 @@ void setup()
 
   delay(1000);
 
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConnected!");
+  Serial.print("IP Address: ");
+
+  Serial.println(WiFi.localIP());
+
+  server.on("/", handleRoot);
+server.on("/send", handleSend);
+server.on("/home", handleHome);
+
+server.onNotFound([](){
+  server.send(404, "text/plain", "Page not found");
+});
+
   // // Start all at 0°
   // moveServo(BASE,0);
   // moveServo(SHOULDER_L,0);
@@ -126,6 +231,8 @@ void setup()
   // }
 
   setHome();
+
+  server.begin();
 
   Serial.println("Reached 90 degrees.");
   Serial.println("test");
@@ -189,5 +296,6 @@ void loop()
     }
   }
   //Serial.println("test");
+  server.handleClient();
 }
 
