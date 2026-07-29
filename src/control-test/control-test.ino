@@ -14,30 +14,141 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 void handleRoot()
 {
-  String page = 
-  "<!DOCTYPE html>"
-  "<html>"
-  "<head>"
-  "<title>ESP32 Robot Arm</title>"
-  "</head>"
+String page = R"rawliteral(
+<!DOCTYPE html>
+<html>
 
-  "<body>"
-  "<h1>Robot Arm Controller</h1>"
+<head>
 
-  "<form action='/send' method='GET'>"
-  "<label>Command:</label><br>"
-  "<input type='text' name='cmd' placeholder='Example: 0 90'>"
-  "<br><br>"
-  "<button type='submit'>Send</button>"
-  "</form>"
+<title>Robot Arm Control</title>
 
-  "<br>"
-  "<a href='/home'>Set Home</a>"
+<style>
 
-  "</body>"
-  "</html>";
+body {
+  font-family: Arial;
+  background:#222;
+  color:white;
+  text-align:center;
+}
 
-  server.send(200, "text/html", page);
+.container {
+  width:400px;
+  margin:auto;
+}
+
+.joint {
+  background:#333;
+  padding:15px;
+  margin:10px;
+  border-radius:10px;
+}
+
+input[type=range] {
+  width:90%;
+}
+
+.value {
+  font-size:20px;
+  color:#00ff99;
+}
+
+button {
+  padding:12px 25px;
+  font-size:18px;
+  margin:10px;
+  border-radius:8px;
+}
+
+.home {
+  background:#00aa55;
+  color:white;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+<h1>Robot Arm</h1>
+
+
+<div class="joint">
+<h3>Base</h3>
+<input type="range" min="0" max="180" value="90"
+oninput="update(0,this.value)">
+<p class="value" id="j0">90°</p>
+</div>
+
+
+<div class="joint">
+<h3>Shoulder</h3>
+<input type="range" min="0" max="180" value="90"
+oninput="update(1,this.value)">
+<p class="value" id="j1">90°</p>
+</div>
+
+
+<div class="joint">
+<h3>Elbow</h3>
+<input type="range" min="0" max="180" value="90"
+oninput="update(2,this.value)">
+<p class="value" id="j2">90°</p>
+</div>
+
+
+<div class="joint">
+<h3>Wrist</h3>
+<input type="range" min="0" max="180" value="90"
+oninput="update(3,this.value)">
+<p class="value" id="j3">90°</p>
+</div>
+
+
+<div class="joint">
+<h3>Gripper</h3>
+<input type="range" min="0" max="180" value="90"
+oninput="update(4,this.value)">
+<p class="value" id="j4">90°</p>
+</div>
+
+
+<button class="home" onclick="home()">
+HOME
+</button>
+
+
+</div>
+
+
+<script>
+
+function update(joint,angle)
+{
+ document.getElementById("j"+joint).innerHTML=angle+"°";
+
+ fetch("/servo?joint="+joint+"&angle="+angle);
+}
+
+
+function home()
+{
+ fetch("/home");
+}
+
+</script>
+
+
+</body>
+</html>
+)rawliteral";
+
+
+server.send(200,"text/html",page);
+
 }
 
 void handleSend()
@@ -66,6 +177,16 @@ void handleHome()
 
   server.send(200, "text/html",
   "<h2>Robot moved to Home</h2><a href='/'>Back</a>");
+}
+
+void handleServo()
+{
+  int joint = server.arg("joint").toInt();
+  int angle = server.arg("angle").toInt();
+
+  setJointAngle(joint, angle);
+
+  server.send(200,"text/plain","OK");
 }
 
 // Servo pulse limits
@@ -97,51 +218,79 @@ typedef struct {
 Joint joints[] = {{0,0}, {1,0}, {2,0} ,{3, 0}, {4, 0}};
 double currentAngles[5] = {90,90,90,90,90};
 
-void setJointAngle(int jointNo, double targetAngle)
+double targetAngles[5]  = {90,90,90,90,90};
+
+unsigned long lastServoUpdate = 0;
+
+int servoSpeed = 1; // degrees per update
+int servoInterval = 20; // ms
+
+void setJointAngle(int jointNo, double angle)
 {
-  targetAngle = constrain(targetAngle, 0, 180);
+  if (angle < 0) angle = 0;
+  if (angle > 180) angle = 180;
 
-  double startAngle = currentAngles[jointNo];
+  targetAngles[jointNo] = angle;
+}
 
-  int steps = abs(targetAngle - startAngle);
+void updateServos()
+{
+  if (millis() - lastServoUpdate < servoInterval)
+    return;
 
-  if (steps == 0) return;
+  lastServoUpdate = millis();
 
-  for (int i = 0; i <= steps; i++)
+
+  for (int i = 0; i < 5; i++)
   {
-    double angle = startAngle + 
-      (targetAngle - startAngle) * i / steps;
-
-
-    switch (jointNo)
+    if (currentAngles[i] < targetAngles[i])
     {
-      case BASE:
-        moveServo(BASE_SERVO, angle);
-        break;
+      currentAngles[i] += servoSpeed;
 
-      case SHOULDER:
-        moveServo(SHOULDER_L_SERVO, angle);
-        moveServo(SHOULDER_R_SERVO, 180-angle);
-        break;
-
-      case ELBOW:
-        moveServo(ELBOW_L_SERVO, angle);
-        moveServo(ELBOW_R_SERVO, 180-angle);
-        break;
-
-      case WRIST:
-        moveServo(WRIST_PITCH_SERVO, angle);
-        break;
-
-      case GRIPPER:
-        moveServo(GRIPPER_SERVO, angle);
-        break;
+      if(currentAngles[i] > targetAngles[i])
+        currentAngles[i] = targetAngles[i];
     }
 
-    delay(20); // speed control
-  }
 
-  currentAngles[jointNo] = targetAngle;
+    if (currentAngles[i] > targetAngles[i])
+    {
+      currentAngles[i] -= servoSpeed;
+
+      if(currentAngles[i] < targetAngles[i])
+        currentAngles[i] = targetAngles[i];
+    }
+
+
+    moveJointServo(i, currentAngles[i]);
+  }
+}
+
+void moveJointServo(int jointNo, double angle)
+{
+  switch(jointNo)
+  {
+    case BASE:
+      moveServo(BASE_SERVO, angle);
+      break;
+
+    case SHOULDER:
+      moveServo(SHOULDER_L_SERVO, angle);
+      moveServo(SHOULDER_R_SERVO, 180-angle);
+      break;
+
+    case ELBOW:
+      moveServo(ELBOW_L_SERVO, angle);
+      moveServo(ELBOW_R_SERVO, 180-angle);
+      break;
+
+    case WRIST:
+      moveServo(WRIST_PITCH_SERVO, angle);
+      break;
+
+    case GRIPPER:
+      moveServo(GRIPPER_SERVO, angle);
+      break;
+  }
 }
 
 void setPose(
@@ -177,9 +326,6 @@ void setup()
 {
   Serial.begin(115200);
 
-  pwm.begin();
-  pwm.setPWMFreq(50);
-
   delay(1000);
 
   Serial.println("Connecting to WiFi...");
@@ -196,12 +342,12 @@ void setup()
   Serial.println(WiFi.localIP());
 
   server.on("/", handleRoot);
-server.on("/send", handleSend);
-server.on("/home", handleHome);
+  server.on("/servo", handleServo);
+  server.on("/home", handleHome);
 
-server.onNotFound([](){
-  server.send(404, "text/plain", "Page not found");
-});
+  server.onNotFound([](){
+    server.send(404, "text/plain", "Page not found");
+  });
 
   // // Start all at 0°
   // moveServo(BASE,0);
@@ -297,5 +443,7 @@ void loop()
   }
   //Serial.println("test");
   server.handleClient();
+
+  updateServos();
 }
 
