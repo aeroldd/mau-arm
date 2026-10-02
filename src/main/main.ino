@@ -8,11 +8,13 @@ void setup()
 {
   Serial.begin(115200);
   initWebServer();
+  Serial.print("webserver init!");
 
   setHome();
+  Serial.print("set to home, setup finished");
 }
 
-String line;
+// String line;
 
 void loop()
 {
@@ -24,7 +26,7 @@ void loop()
       parseCommand(line);
     }
   }
-  //Serial.println("test");
+  Serial.println("test");
   updateWebServerControl();
 
   updateServos();
