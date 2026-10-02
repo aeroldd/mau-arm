@@ -11,6 +11,9 @@ const char* password = "mirdif786";
 
 WebServer server(80);
 
+const unsigned long WIFI_TIMEOUT_MS = 15000;
+bool webServerStarted = false;
+
 void handleRoot()
 {
 String page = R"rawliteral(
@@ -180,9 +183,15 @@ void handleHome()
 
 void handleServo()
 {
+  if (!server.hasArg("joint") || !server.hasArg("angle"))
+  {
+    server.send(400, "text/plain", "Missing joint or angle");
+    return;
+  }
+
   int joint = server.arg("joint").toInt();
   int angle = server.arg("angle").toInt();
-  
+
   setJointAngle(joint, angle);
 
   server.send(200,"text/plain","OK");
@@ -192,7 +201,12 @@ void initWebServer() {
   Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
 
+  unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED) {
+    if (millis() - start > WIFI_TIMEOUT_MS) {
+      Serial.println("\nWiFi connect timed out, web control disabled. Serial control still works.");
+      return;
+    }
     delay(500);
     Serial.print(".");
   }
@@ -211,8 +225,10 @@ void initWebServer() {
   });
 
   server.begin();
+  webServerStarted = true;
 }
 
 void updateWebServerControl() {
+  if (!webServerStarted) return;
   server.handleClient();
 }

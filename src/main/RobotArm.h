@@ -17,9 +17,14 @@
 #define WRIST 3
 #define GRIPPER 4
 
+#define NUM_JOINTS 5
+
 void setJointAngle(int jointNo, double angle);
 
 void moveJointServo(int jointNo, double angle);
+
+// Immediately write target angles to all servos (no smoothing)
+void writeAllServos();
 
 void updateServos();
 

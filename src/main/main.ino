@@ -7,14 +7,19 @@
 void setup()
 {
   Serial.begin(115200);
-  initWebServer();
-  Serial.print("webserver init!");
+
+  initServoController();
+  Serial.println("servo controller init!");
 
   setHome();
-  Serial.print("set to home, setup finished");
+  writeAllServos();
+  Serial.println("set to home");
+
+  initWebServer();
+  Serial.println("setup finished");
 }
 
-// String line;
+String line;
 
 void loop()
 {
@@ -26,7 +31,7 @@ void loop()
       parseCommand(line);
     }
   }
-  Serial.println("test");
+
   updateWebServerControl();
 
   updateServos();

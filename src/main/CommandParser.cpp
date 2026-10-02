@@ -4,7 +4,7 @@
 #include "RobotArm.h"
 
 bool verifyJoint(int joint) {
-  if (joint >= 0 && joint <= 5) {
+  if (joint >= 0 && joint < NUM_JOINTS) {
     return true;
   }
   return false;
@@ -18,15 +18,19 @@ bool verifyAngle(double angle) {
 }
 
 void parseCommand(String line) {
-  int joint;
-  double angle;
-  sscanf(line.c_str(), "%d %lf", &joint, &angle);
+  int joint = -1;
+  double angle = -1;
 
   // SET COMMAMDS
 
-  if (line.equals("HOME")) {
+  if (line.equalsIgnoreCase("HOME")) {
     Serial.println("Set to home position.");
-    setPose(90,90,90,90,90);
+    setHome();
+    return;
+  }
+
+  if (sscanf(line.c_str(), "%d %lf", &joint, &angle) != 2) {
+    Serial.println("Invalid command. Use: <joint> <angle>  or  HOME");
     return;
   }
 
@@ -41,7 +45,8 @@ void parseCommand(String line) {
   }
   else {
     Serial.println("Invalid joint.");
-  } 
+    return;
+  }
   Serial.print("joint: ");
   Serial.println(joint);
   Serial.print("angle: ");

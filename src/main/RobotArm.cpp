@@ -5,17 +5,19 @@
 
 // base, shoulder, elbow, pitch, wrist revolution
 Joint joints[] = {{0,0}, {1,0}, {2,0} ,{3, 0}, {4, 0}};
-double currentAngles[5] = {90,90,90,90,90};
+double currentAngles[NUM_JOINTS] = {90,90,90,90,90};
 
-double targetAngles[5]  = {90,90,90,90,90};
+double targetAngles[NUM_JOINTS] = {90,90,90,90,90};
 
 unsigned long lastServoUpdate = 0;
 
 int servoSpeed = 1; // degrees per update
-int servoInterval = 20; // ms
+unsigned long servoInterval = 20; // ms
 
 void setJointAngle(int jointNo, double angle)
 {
+  if (jointNo < 0 || jointNo >= NUM_JOINTS) return;
+
   if (angle < 0) angle = 0;
   if (angle > 180) angle = 180;
 
@@ -50,6 +52,14 @@ void moveJointServo(int jointNo, double angle)
   }
 }
 
+void writeAllServos()
+{
+  for (int i = 0; i < NUM_JOINTS; i++)
+  {
+    currentAngles[i] = targetAngles[i];
+    moveJointServo(i, currentAngles[i]);
+  }
+}
 
 void updateServos()
 {
@@ -58,26 +68,25 @@ void updateServos()
 
   lastServoUpdate = millis();
 
-
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < NUM_JOINTS; i++)
   {
+    if (currentAngles[i] == targetAngles[i])
+      continue;
+
     if (currentAngles[i] < targetAngles[i])
     {
       currentAngles[i] += servoSpeed;
 
-      if(currentAngles[i] > targetAngles[i])
+      if (currentAngles[i] > targetAngles[i])
         currentAngles[i] = targetAngles[i];
     }
-
-
-    if (currentAngles[i] > targetAngles[i])
+    else
     {
       currentAngles[i] -= servoSpeed;
 
-      if(currentAngles[i] < targetAngles[i])
+      if (currentAngles[i] < targetAngles[i])
         currentAngles[i] = targetAngles[i];
     }
-
 
     moveJointServo(i, currentAngles[i]);
   }
