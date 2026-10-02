@@ -11,7 +11,7 @@ void setup()
   initServoController();
   Serial.println("servo controller init!");
 
-  setHome();
+  initArm();
   writeAllServos();
   Serial.println("set to home");
 

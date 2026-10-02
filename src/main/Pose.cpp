@@ -5,16 +5,19 @@ void setPose(
   double base,
   double shoulder,
   double elbow,
-  double wrist,
+  double wristPitch,
+  double wristRotate,
   double gripper
 ) {
   setJointAngle(BASE, base);
   setJointAngle(SHOULDER, shoulder);
   setJointAngle(ELBOW, elbow);
-  setJointAngle(WRIST, wrist);
+  setJointAngle(WRIST_PITCH, wristPitch);
+  setJointAngle(WRIST_ROTATE, wristRotate);
   setJointAngle(GRIPPER, gripper);
 }
 
 void setHome() {
-  setPose(90,90,90,90,90);
+  for (int i = 0; i < NUM_JOINTS; i++)
+    setJointAngle(i, jointConfig[i].homeAngle);
 }

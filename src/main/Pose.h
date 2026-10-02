@@ -6,7 +6,8 @@ void setPose(
   double base,
   double shoulder,
   double elbow,
-  double wrist,
+  double wristPitch,
+  double wristRotate,
   double gripper
 );
 

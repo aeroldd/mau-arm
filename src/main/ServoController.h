@@ -3,19 +3,15 @@
 
 #include <Arduino.h>
 
-// Servo pulse limits
+// Servo pulse limits (PCA9685 ticks at 50Hz, 4096 ticks = 20ms)
 #define SERVOMIN 125
 #define SERVOMAX 510
 
-typedef struct {
-  int jointNo;
-  double angle;
-} Joint;
-
 // Convert angle to PCA9685 pulse
-int angleToPulse(int angle);
+int angleToPulse(double angle);
 
-void moveServo(uint8_t channel, int angle);
+// Write an angle (0-180) to a PCA9685 channel, applying that channel's trim
+void moveServo(uint8_t channel, double angle);
 
 void initServoController();
 
